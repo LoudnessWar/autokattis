@@ -271,6 +271,39 @@ class Kattis(requests.Session):
         Default: includes partially solved questions.
         '''
         return self.problems(show_solved=False, show_partial=show_partial, show_tried=True, show_untried=True)
+    
+    @lru_cache
+    def submission(self, problem_id, *problem_ids):
+        '''
+        get the file for the submission
+        '''
+
+        response = self.get(f'{self.BASE_URL}/problems/{problem_id}?tab=submissions')
+
+        if not response.ok:
+            print(f'Ignoring {problem_id}')
+            return []
+        
+        soup = bs(response.content, features='lxml')
+        table = soup.find('table', id='submissions')
+
+
+        if table:
+            for row in table.tbody.find_all('tr'):
+                columns = row.find_all('td')
+                columns_text = [column.text.strip() for column in columns if column.text.strip()]
+                if columns_text:
+                    try:
+                        status, runtime, language, tc, *_ = columns_text
+                        runtime = ' '.join(runtime.split())
+                        test_case_passed, test_case_full = map(int, tc.split('/'))
+                    except:
+                        status, language, *_ = columns_text
+                        runtime = test_case_passed = test_case_full = None
+                    link = f"{self.BASE_URL}{columns[-1].find('a').get('href')}"
+                    return link
+        return []
+
 
     @lru_cache
     def problem(self, problem_id, *problem_ids):
