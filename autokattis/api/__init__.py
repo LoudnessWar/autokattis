@@ -357,8 +357,6 @@ class Kattis(requests.Session):
         get the file for the latest submissiom
         #to have it get all submissions maybe
         '''
-
-        print(download_path)
         response = self.get(f'{self.BASE_URL}/problems/{problem_id}?tab=submissions')
 
         if not response.ok:
@@ -396,7 +394,7 @@ class Kattis(requests.Session):
                         download_url =  f"{self.BASE_URL}{download_link}"
 
                         if os.path.isdir(download_path):# this could be probably implimented differently without os import
-                            print("Provided path is a directory, file name will be generated.")
+                            # print("Provided path is a directory, file name will be generated.")
                             filename = download_link.split('/')[-1]
                             download_path = os.path.join(download_path, filename)
 
