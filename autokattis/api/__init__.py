@@ -1,5 +1,6 @@
 import io
 import math
+import os
 import matplotlib.pyplot as plt
 import pandas as pd
 import re
@@ -275,7 +276,8 @@ class Kattis(requests.Session):
     @lru_cache
     def submission(self, problem_id, *problem_ids):
         '''
-        get the file for the submission
+        get the latest submission link page
+        #to have it get all submissions maybe
         '''
 
         response = self.get(f'{self.BASE_URL}/problems/{problem_id}?tab=submissions')
@@ -303,7 +305,118 @@ class Kattis(requests.Session):
                     link = f"{self.BASE_URL}{columns[-1].find('a').get('href')}"
                     return link
         return []
+    
+    @lru_cache
+    def downloadlink(self, problem_id, *problem_ids):
+        '''
+        get the download link for the latest submission
+        #to have it get all submissions maybe
+        '''
 
+        response = self.get(f'{self.BASE_URL}/problems/{problem_id}?tab=submissions')
+
+        if not response.ok:
+            print(f'Ignoring {problem_id}')
+            return []
+        
+        soup = bs(response.content, features='lxml')
+        table = soup.find('table', id='submissions')
+
+
+        if table:
+            for row in table.tbody.find_all('tr'):
+                columns = row.find_all('td')
+                columns_text = [column.text.strip() for column in columns if column.text.strip()]
+                if columns_text:
+                    try:
+                        status, runtime, language, tc, *_ = columns_text
+                        runtime = ' '.join(runtime.split())
+                        test_case_passed, test_case_full = map(int, tc.split('/'))
+                    except:
+                        status, language, *_ = columns_text
+                        runtime = test_case_passed = test_case_full = None
+                    link = f"{self.BASE_URL}{columns[-1].find('a').get('href')}"
+
+                    submission_response = self.get(link)
+                    if not submission_response.ok:
+                        print(f'Ignoring submission {link}')
+                        return []
+                    
+                    submission_soup = bs(submission_response.content, features='lxml')
+                    download_button = submission_soup.find('a', href=lambda href: href and '/source/' in href)
+                    if download_button:
+                        download_link = download_button.get('href')
+                        return f"{self.BASE_URL}{download_link}"
+                    # return link
+        return []
+    
+
+    @lru_cache
+    def downloadSub(self, problem_id, download_path):
+        '''
+        get the file for the latest submissiom
+        #to have it get all submissions maybe
+        '''
+
+        print(download_path)
+        response = self.get(f'{self.BASE_URL}/problems/{problem_id}?tab=submissions')
+
+        if not response.ok:
+            print(f'Ignoring {problem_id}')
+            return []
+        
+        soup = bs(response.content, features='lxml')
+        table = soup.find('table', id='submissions')
+
+
+        if table:
+            for row in table.tbody.find_all('tr'):
+                columns = row.find_all('td')
+                columns_text = [column.text.strip() for column in columns if column.text.strip()]
+                if columns_text:
+                    try:
+                        status, runtime, language, tc, *_ = columns_text
+                        runtime = ' '.join(runtime.split())
+                        test_case_passed, test_case_full = map(int, tc.split('/'))
+                    except:
+                        status, language, *_ = columns_text
+                        runtime = test_case_passed = test_case_full = None
+                    link = f"{self.BASE_URL}{columns[-1].find('a').get('href')}"
+
+                    submission_response = self.get(link)
+                    if not submission_response.ok:
+                        print(f'Ignoring submission {link}')
+                        return []
+                    
+                    submission_soup = bs(submission_response.content, features='lxml')
+                    download_button = submission_soup.find('a', href=lambda href: href and '/source/' in href)
+
+                    if download_button:
+                        download_link = download_button.get('href')
+                        download_url =  f"{self.BASE_URL}{download_link}"
+
+                        if os.path.isdir(download_path):# this could be probably implimented differently without os import
+                            print("Provided path is a directory, file name will be generated.")
+                            filename = download_link.split('/')[-1]
+                            download_path = os.path.join(download_path, filename)
+
+                        if download_path:
+                            download_response = self.get(download_url)
+                            if download_response.ok:
+                                with open(download_path, 'wb') as f:
+                                    f.write(download_response.content)
+                                return None
+                            else:
+                                print(f'Failed to download file from {download_url}')
+                                return None
+                        else:# returns the file content 
+                            download_response = self.get(download_url)
+                            if download_response.ok:
+                                return download_response.content
+                            else:
+                                print(f'Failed to download file from {download_url}')
+                                return None                                
+        return []
 
     @lru_cache
     def problem(self, problem_id, *problem_ids):
