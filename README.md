@@ -1,5 +1,8 @@
 This is a fork of https://github.com/RussellDash332/autokattis
 
+You can find an example of its use here https://github.com/LoudnessWar/HaskellKattisSolutions/blob/main/createExample.py
+
+#TODO: really need to make it skip specified files
 ```
 autokattis
 ├─ .git
